@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>APPA Live</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌍</text></svg>">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="field"></canvas>
+<div id="map"></div>
+<canvas id="overlay"></canvas>
+<canvas id="wind"></canvas>
+
+<aside id="panel" class="card">
+  <header>
+    <h1>APPA <span>Live</span></h1>
+    <span id="run-info" class="muted"></span>
+  </header>
+
+  <section>
+    <h2>Data</h2>
+    <label>Run <select id="sel-run"></select></label>
+    <label>Variable <select id="sel-var"></select></label>
+    <label id="row-level">Pressure level <select id="sel-level"></select></label>
+    <label>Statistic <select id="sel-prod"></select></label>
+  </section>
+
+  <section>
+    <h2>Display</h2>
+    <label>Colormap <select id="sel-cmap"></select></label>
+    <label>Opacity <input type="range" id="rng-opacity" min="10" max="100" value="95"></label>
+    <div class="pair">
+      <label>Min <input type="number" id="in-min" step="any" inputmode="decimal"></label>
+      <label>Max <input type="number" id="in-max" step="any" inputmode="decimal"></label>
+      <button id="btn-reset-range" type="button" title="Back to the automatic colour scale">Auto</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Overlays</h2>
+    <label class="check"><input type="checkbox" id="chk-wind" checked> Wind particles</label>
+    <label class="indent">Speed <input type="range" id="rng-wind" min="0.4" max="2.5" step="0.1" value="1"></label>
+    <label class="check"><input type="checkbox" id="chk-iso" checked> Isobars &amp; H/L (MSLP, 4 hPa)</label>
+    <label class="check"><input type="checkbox" id="chk-grid" checked> Graticule</label>
+  </section>
+
+  <div class="row">
+    <button id="btn-skill" type="button">Forecast skill</button>
+  </div>
+  <p class="muted hint">Click the map for the ensemble forecast at a point. Space plays, ← → steps.</p>
+</aside>
+
+<div id="legend" class="card">
+  <div id="legend-title"></div>
+  <div id="legend-bar"></div>
+  <div id="legend-scale"></div>
+  <div id="legend-unit" class="muted"></div>
+</div>
+
+<div id="readout" class="card mono">—</div>
+
+<div id="timebar" class="card">
+  <button id="btn-play" type="button" aria-label="Play">▶</button>
+  <input id="slider" type="range" min="0" max="0" value="0" step="1" aria-label="Forecast time">
+  <div id="time-label" class="mono"></div>
+</div>
+
+<section id="point-panel" class="card" hidden>
+  <button class="close" data-close="point-panel" aria-label="Close">×</button>
+  <h2 id="point-title" class="mono"></h2>
+  <div id="point-tabs" role="tablist"></div>
+  <canvas id="plume"></canvas>
+  <p class="muted hint" id="point-note"></p>
+</section>
+
+<section id="skill-panel" class="card" hidden>
+  <button class="close" data-close="skill-panel" aria-label="Close">×</button>
+  <h2>Forecast skill</h2>
+  <p class="muted hint" id="skill-note"></p>
+  <div id="skill-charts"></div>
+</section>
+
+<div id="toast" class="card" hidden></div>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

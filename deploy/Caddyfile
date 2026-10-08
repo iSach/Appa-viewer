@@ -1,0 +1,36 @@
+# Static hosting of the APPA viewer + published forecast data. No dynamic code.
+# Caddy obtains and renews the HTTPS certificate for this hostname automatically
+# (needs DNS A/AAAA for appa.isach.be pointing at this server, and ports 80+443 open).
+appa.isach.be {
+	root * /srv/appa-viewer/web      # web/data inside it is a symlink to /srv/appa-data
+	file_server                      # serves HTTP Range requests (point forecasts need them)
+
+	# Compress text only: PNG packs and uint16 point files are already dense / read by byte range.
+	encode zstd gzip {
+		match {
+			header Content-Type text/*
+			header Content-Type application/json*
+		}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+
+	# Pointers change on every run: never cache.
+	@pointers path /data/latest.json /data/runs.json
+	header @pointers Cache-Control "no-store"
+
+	# Per-run metadata: revalidate.
+	@runmeta path_regexp runmeta ^/data/runs/[^/]+/(manifest|verification)\.json$
+	header @runmeta Cache-Control "no-cache"
+
+	# Packs and point files never change once published (run ids are unique): cache for good.
+	@immutable path_regexp immutable ^/data/runs/.+\.(pack|u16)$
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	# Viewer code: always revalidate so a git pull is visible immediately.
+	@code path / /index.html /style.css /js/*
+	header @code Cache-Control "no-cache"
+}
