@@ -70,7 +70,8 @@ export class WindParticles {
     ctx.lineCap = 'round';
     const degPerPx = 360 / (512 * 2 ** map.getZoom());
     const k = 5 * this.speed * dt;                          // px per (m/s) per second: 20 m/s -> ~100 px/s
-    const bounds = map.getBounds();
+    const cw = this.canvas.width / dpr, ch = this.canvas.height / dpr, margin = 24;
+    const maxStep = 80;                                      // px: anything longer is a bug, never draw it
     for (let i = 0; i < this.n; i++) {
       this.age[i] += dt;
       if (this.age[i] > this.life[i]) { this._spawn(i); continue; }
@@ -79,10 +80,12 @@ export class WindParticles {
       const cos = Math.cos((this.lat[i] * Math.PI) / 180);
       this.lon[i] += u * k * degPerPx;
       this.lat[i] += v * k * degPerPx * cos;
-      if (this.lon[i] > 180) this.lon[i] -= 360;
-      if (this.lon[i] < -180) this.lon[i] += 360;
-      if (Math.abs(this.lat[i]) > 85 || !bounds.contains([this.lon[i], this.lat[i]])) { this._spawn(i); continue; }
+      // Longitude is deliberately NOT wrapped: wrapping jumps the particle by a whole world on screen and
+      // draws a streak across the map. Sampling (_uv) wraps for itself, and the map draws world copies.
+      if (Math.abs(this.lat[i]) > 85) { this._spawn(i); continue; }
       const p1 = map.project([this.lon[i], this.lat[i]]);
+      if (p1.x < -margin || p1.x > cw + margin || p1.y < -margin || p1.y > ch + margin ||
+          Math.abs(p1.x - p0.x) > maxStep || Math.abs(p1.y - p0.y) > maxStep) { this._spawn(i); continue; }
       const speed = Math.hypot(u, v);
       ctx.strokeStyle = `rgba(255,255,255,${Math.min(0.95, 0.5 + speed / 25).toFixed(2)})`;
       ctx.beginPath();
