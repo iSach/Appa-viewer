@@ -204,3 +204,16 @@ def test_js_contouring_known_answers():
     assert r["extrema"] == [{"type": "H", "i": 118, "j": 20, "value": 1031}, {"type": "L", "i": 60, "j": 40, "value": 983}]
     (x0, y0), (x1, y1), (x2, y2) = r["mercator"]
     assert (x0, y0) == (0.5, 0.5) and x1 == 0 and x2 == 1 and abs(y1) < 1e-9 and abs(y2) < 1e-9
+
+
+def test_js_legend_ticks():
+    import shutil, subprocess
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node not installed")
+    r = json.loads(subprocess.run([node, "tests/js/legend_check.mjs"], capture_output=True, text=True, check=True).stdout)
+    assert r["temp"]["v"] == [-60, -40, -20, 0, 20, 40] and r["temp"]["labels"][0] == "−60"   # real minus sign
+    assert r["rain"]["v"] == [0, 1, 2, 3, 4, 5] and r["prob"]["v"][-1] == 100
+    assert r["small"]["labels"] == ["0.00", "0.05", "0.10", "0.15", "0.20", "0.25", "0.30"]       # decimals match the step
+    assert r["decimals"] == [1, 2, 0, 1] and r["neg0"] == "0" and r["minus"] == "−12.5"
+    assert r["sqrt"][0] == 0 and r["sqrt"] == sorted(r["sqrt"]) and len(r["sqrtBig"]) <= 9

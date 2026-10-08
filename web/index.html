@@ -43,7 +43,9 @@
     <h2>Overlays</h2>
     <label class="check"><input type="checkbox" id="chk-wind" checked> Wind particles</label>
     <label class="indent">Speed <input type="range" id="rng-wind" min="0.4" max="2.5" step="0.1" value="1"></label>
+    <label class="indent">Opacity <input type="range" id="rng-wind-op" min="0.1" max="1" step="0.05" value="1"></label>
     <label class="check"><input type="checkbox" id="chk-iso" checked> Isobars &amp; H/L (MSLP, 4 hPa)</label>
+    <label class="indent">Opacity <input type="range" id="rng-iso-op" min="0.1" max="1" step="0.05" value="1"></label>
     <label class="check"><input type="checkbox" id="chk-grid" checked> Graticule</label>
   </section>
 
@@ -54,10 +56,7 @@
 </aside>
 
 <div id="legend" class="card">
-  <div id="legend-title"></div>
-  <div id="legend-bar"></div>
-  <div id="legend-scale"></div>
-  <div id="legend-unit" class="muted"></div>
+  <canvas id="legend-canvas" aria-label="Colour scale"></canvas>
 </div>
 
 <div id="readout" class="card mono">—</div>

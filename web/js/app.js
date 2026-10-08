@@ -1,9 +1,10 @@
-import { COLORMAP_NAMES, cssGradient } from './colormaps.js';
+import { COLORMAP_NAMES, colormapFn } from './colormaps.js';
 import { FramePack, fetchPoint, getJSON, loadRun } from './data.js';
 import { FieldGL } from './fieldgl.js';
 import { dequant, gridIndex } from './geo.js';
 import { WindParticles } from './wind.js';
 import { Overlay } from './overlay.js';
+import { drawLegend, niceTicks, sqrtTicks } from './legend.js';
 import { lineChart, plume } from './chart.js';
 
 const $ = (id) => document.getElementById(id);
@@ -14,7 +15,7 @@ const S = {
   manifest: null, runs: [], variable: '2m_temperature', level: 500, product: 'mean',
   t: 0, playing: false, wind: true, iso: true,
   pack: null, windPack: null, textures: new Map(), dirty: true, marker: null, points: null,
-  cmap: null, ranges: {}, cursor: null,
+  cmap: null, ranges: {}, cursor: null, cursorValue: null,
   isoPack: null, isoFrame: -1, isoBusy: false, isoRequested: -1,
 };
 
@@ -129,25 +130,36 @@ function loadWind() {
   S.windPack.prefetchFrom(Math.round(S.t));
 }
 
-/** Display value at fraction t of the colour scale (sqrt-spaced for fields coloured in sqrt space). */
-function legendValue(t) {
-  const [lo, hi] = dispRange(), sq = curEntry().transform === 'sqrt';
-  if (!sq) return show(lo + t * (hi - lo));
-  const s0 = Math.sqrt(Math.max(lo, 0));
-  return show((s0 + t * (Math.sqrt(hi) - s0)) ** 2);
-}
-
 function updateLegend() {
-  const entry = curEntry(), c = conv(), m = varMeta();
+  const entry = curEntry();
   if (!entry) return;
-  $('legend-title').textContent = `${m.label}${hasLevels() ? ` · ${S.level} hPa` : ''} — ${S.manifest.products[S.product].label}`;
-  $('legend-bar').style.backgroundImage = cssGradient(S.cmap || defaultCmap());
-  $('legend-scale').replaceChildren(...[0, 0.25, 0.5, 0.75, 1].map((t) =>
-    Object.assign(document.createElement('span'), { textContent: fmt(legendValue(t)) })));
-  $('legend-unit').textContent = c.unit;
   const [lo, hi] = dispRange();
   $('in-min').value = Number(show(lo).toFixed(2));
   $('in-max').value = Number(show(hi).toFixed(2));
+  renderLegend();
+}
+
+function renderLegend() {
+  const entry = curEntry();
+  if (!entry) return;
+  const c = conv(), m = varMeta(), [lo, hi] = dispRange(), sq = entry.transform === 'sqrt';
+  const dLo = show(lo), dHi = show(hi), s0 = Math.sqrt(Math.max(lo, 0)), s1 = Math.sqrt(hi);
+  // Position on the bar (0..1) of a display value; sqrt-coloured fields are spaced in sqrt space.
+  const tOf = sq
+    ? (d) => (Math.sqrt(Math.max(0, (d - c.offset) / c.scale)) - s0) / (s1 - s0)
+    : (d) => (d - dLo) / (dHi - dLo);
+  const toRaw = (r) => (sq ? r * r : r);                 // entry.range lives in the quantisation (sqrt) space
+  drawLegend($('legend-canvas'), {
+    title: `${m.label}${hasLevels() ? ` · ${S.level} hPa` : ''}`,
+    subtitle: S.manifest.products[S.product].label,
+    unit: c.unit,
+    cmapFn: colormapFn(S.cmap || defaultCmap()),
+    tOf,
+    ticks: sq ? sqrtTicks(dLo, dHi) : niceTicks(dLo, dHi, 7),
+    ends: [dLo, dHi],
+    dataRange: [show(toRaw(entry.range[0])), show(toRaw(entry.range[1]))],
+    cursor: S.cursorValue,
+  });
 }
 
 // ---------- rendering ----------
@@ -265,9 +277,15 @@ const fmtLon = (v) => { const l = ((((v + 180) % 360) + 360) % 360) - 180; retur
 
 function updateReadout(lngLat) {
   const el = $('readout');
-  if (!lngLat || Math.abs(lngLat.lat) > MAX_LAT) { el.textContent = '—'; return; }
+  if (!lngLat || Math.abs(lngLat.lat) > MAX_LAT) {
+    el.textContent = '—';
+    if (S.cursorValue !== null) { S.cursorValue = null; renderLegend(); }
+    return;
+  }
   const rows = [`${fmtLat(lngLat.lat)}  ${fmtLon(lngLat.lng)}`];
   const raw = sampleRaw(S.pack, curEntry(), lngLat);
+  S.cursorValue = raw == null ? null : show(raw);
+  renderLegend();                                       // moves the marker on the colour bar
   const m = varMeta();
   rows.push(`${m.label}${hasLevels() ? ` ${S.level} hPa` : ''}: ${raw == null ? 'n/a' : `${fmt(show(raw))} ${conv().unit}`}`);
   if (S.variable !== 'mean_sea_level_pressure') {
@@ -497,6 +515,8 @@ function wireUI() {
   $('sel-run').onchange = async (e) => { await useRun(e.target.value); };
   $('chk-wind').onchange = (e) => { S.wind = e.target.checked; S.dirty = true; saveHash(); };
   $('rng-wind').oninput = (e) => { particles.speed = Number(e.target.value); };
+  $('rng-wind-op').oninput = (e) => { $('wind').style.opacity = e.target.value; };
+  $('rng-iso-op').oninput = (e) => { overlay.isoOpacity = Number(e.target.value); overlay.draw(); };
   $('chk-iso').onchange = (e) => { S.iso = overlay.showIsobars = e.target.checked; overlay.draw(); S.dirty = true; };
   $('chk-grid').onchange = (e) => { overlay.showGraticule = e.target.checked; overlay.draw(); };
   $('rng-opacity').oninput = (e) => { fieldGL.opacity = Number(e.target.value) / 100; S.dirty = true; };
@@ -528,7 +548,7 @@ function wireUI() {
   map.on('mousemove', onHover);
   map.on('mouseout', () => { S.cursor = null; updateReadout(null); });
   map.on('click', onClick);
-  addEventListener('resize', () => S.points && renderTabs());
+  addEventListener('resize', () => { renderLegend(); if (S.points) renderTabs(); });
 }
 
 function togglePlay() { S.playing = !S.playing; syncPlayButton(); }

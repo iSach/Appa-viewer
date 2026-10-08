@@ -13,6 +13,7 @@ export class Overlay {
     this.contours = null;
     this.showIsobars = true;
     this.showGraticule = true;
+    this.isoOpacity = 1;      // applies to isobars, their labels and the H/L markers (not the graticule)
     map.on('move', () => this.draw());
     map.on('resize', () => { this.resize(); this.draw(); });
     this.resize();
@@ -78,6 +79,8 @@ export class Overlay {
   _isobars(v) {
     const { ctx, w, h } = this, { lines, labels, centres } = this.contours;
     const kMin = Math.floor(v.x0), kMax = Math.floor(v.x1);          // world copies in view
+    ctx.save();
+    ctx.globalAlpha = this.isoOpacity;
     const px = (x, k) => (x + k - v.cx) * v.world + w / 2, py = (y) => (y - v.cy) * v.world + h / 2;
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     for (const pass of [{ major: false, dark: true }, { major: true, dark: true }, { major: false }, { major: true }]) {
@@ -129,6 +132,7 @@ export class Overlay {
         ctx.strokeText(String(c.value), x, y + 18); ctx.fillText(String(c.value), x, y + 18);
       }
     }
+    ctx.restore();
   }
 }
 

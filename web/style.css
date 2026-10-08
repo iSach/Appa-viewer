@@ -46,12 +46,8 @@ input[type=checkbox] { accent-color: var(--accent); margin: 0; }
 .row { display: flex; gap: 8px; }
 .row button { flex: 1; }
 
-#legend { right: var(--gutter); top: var(--gutter); width: 250px; }
-#legend-title { font-size: 11.5px; margin-bottom: 7px; }
-#legend-bar { height: 10px; border: 1px solid var(--line-strong); border-radius: 2px;
-  background-color: #1a2233; background-image: repeating-conic-gradient(#222b3d 0 25%, #151b29 0 50%); background-size: 8px 8px; }
-#legend-scale { display: flex; justify-content: space-between; font: 11px var(--mono); margin-top: 4px; }
-#legend-unit { font-size: 11px; text-align: right; margin-top: 2px; }
+#legend { right: var(--gutter); top: var(--gutter); width: min(390px, calc(100vw - 2 * var(--gutter))); padding: 10px 12px 8px; }
+#legend-canvas { display: block; width: 100%; height: 132px; }
 
 #readout { left: var(--gutter); bottom: calc(var(--gutter) + env(safe-area-inset-bottom)); max-width: 46vw;
   font-size: 11.5px; line-height: 1.6; white-space: pre-line; min-width: 210px; }
@@ -78,7 +74,7 @@ input[type=checkbox] { accent-color: var(--accent); margin: 0; }
 
 @media (max-width: 720px) {
   #panel { width: calc(100vw - 2 * var(--gutter)); max-height: 46vh; }
-  #legend { top: auto; right: var(--gutter); bottom: calc(var(--gutter) + 92px); width: 200px; }
+  #legend { top: auto; right: var(--gutter); bottom: calc(var(--gutter) + 92px); width: min(300px, 60vw); }
   #readout { bottom: calc(var(--gutter) + 92px); max-width: 52vw; }
   #point-panel, #skill-panel { bottom: calc(var(--gutter) + 92px); }
 }
