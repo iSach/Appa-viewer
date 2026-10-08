@@ -72,3 +72,7 @@ mm/h, geopotential m²/s²) are assumed from appa-live; `ZarrSource` logs a warn
 * In-memory ensemble: decode members straight to GPU tensors instead of per-member zarr (the one remaining disk round trip).
 * Overlap stages: fetch/encode the next cycle while building the current one.
 * Isobar contours (marching squares in the shader or from the 16-bit pressure field), time-aggregate fields (24 h rain).
+
+## Basemap data
+
+`web/vendor/{coast,borders}.json` are Natural Earth 110m lines (public domain, via npm `world-atlas` 2.0.2 + `topojson-client` mesh). `tools/clean_natural_earth.py` unwraps longitudes so lines crossing the antimeridian stay continuous; without it they are drawn as straight streaks across the whole map. A test guards this.

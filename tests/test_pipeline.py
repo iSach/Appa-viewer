@@ -217,3 +217,22 @@ def test_js_legend_ticks():
     assert r["small"]["labels"] == ["0.00", "0.05", "0.10", "0.15", "0.20", "0.25", "0.30"]       # decimals match the step
     assert r["decimals"] == [1, 2, 0, 1] and r["neg0"] == "0" and r["minus"] == "−12.5"
     assert r["sqrt"][0] == 0 and r["sqrt"] == sorted(r["sqrt"]) and len(r["sqrtBig"]) <= 9
+
+
+def test_natural_earth_lines_never_jump_across_the_map():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+    import clean_natural_earth as c
+
+    # Fiji's real coastline crosses the antimeridian: -180 -> +179.36 must become a short step.
+    line = c.unwrap_line([[-179.92, -16.5], [-180, -16.56], [179.36, -16.8], [180, -16.07], [-180, -16.07]])
+    assert max(abs(b[0] - a[0]) for a, b in zip(line, line[1:])) < 1.0
+    assert c.unwrap_line([[10, 0], [10, 0], [11, 1]]) == [[10, 0], [11, 1]]       # zero-length steps dropped
+    assert c.unwrap_line(c.unwrap_line(line)) == line                              # idempotent
+
+    root = Path(__file__).resolve().parent.parent / "web" / "vendor"
+    for name in ("coast", "borders"):
+        lines = json.loads((root / f"{name}.json").read_text())["geometry"]["coordinates"]
+        worst = max(abs(b[0] - a[0]) for l in lines for a, b in zip(l, l[1:]))
+        assert worst < 30, f"{name}: a segment spans {worst} degrees of longitude"
